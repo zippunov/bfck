@@ -15,9 +15,71 @@ enum Op {
 }
 
 #[derive(Debug)]
+struct Tape {
+    cells: Vec<u8>,
+    pointer: usize,
+}
+
+impl Tape {
+
+	fn new() -> Self {
+		Tape{
+			cells: vec!(0; 30000),
+			pointer: 0,
+		}
+	}
+
+	fn read(&mut self) -> u8 {
+		self.cells[self.pointer]
+	}
+
+	fn write(&mut self, value : i16)  -> Result<(), i16> {
+		self.cells[self.pointer] = (value % 256) as u8;
+		Ok(())
+	}
+
+	fn left(&mut self, value : i16) -> Result<(), i16> {
+		let decrement = value as usize;
+		if self.pointer < decrement {
+			return Err(100);
+		}
+		self.pointer = self.pointer - decrement;
+		Ok(())
+	}
+
+	fn right(&mut self, value : i16) -> Result<(), i16> {
+		let increment = value as usize;
+		if self.pointer + increment > 30000 {
+			return Err(100);
+		}
+		self.pointer = self.pointer + increment;
+		Ok(())
+	}
+
+	fn add(&mut self, value : i16) -> Result<(), i16> {
+		let read = self.read() as i16;
+		let new_value = read + value;
+		if new_value < 0 {
+			return Err(100);
+		}
+		try!(self.write(new_value));
+		Ok(())
+	}
+
+	fn substract(&mut self, value : i16) -> Result<(), i16> {
+		let read = self.read() as i16;
+		let new_value = read - value;
+		println!("Substracting {} = {} - {}", new_value, read, value);
+		if new_value < 0 {
+			return Err(100);
+		}
+		try!(self.write(new_value));
+		Ok(())
+	}
+}
+
+#[derive(Debug)]
 pub struct BFBox {
-    reader: Read,
-    writer: Write,
     tape: Tape,
     programm: BfProgramm,
     max_cycles: u32,
@@ -25,54 +87,55 @@ pub struct BFBox {
 }
 
 impl BFBox {
-	pub fn new(text : &str, reader: &mut Read, writer : &mut Write, max_cycles: u32) -> Result<Self, i16> {
-		match  BfProgramm::new(text) {
-			Ok(programm) => Ok(BFBox {
-					reader: reader,
-		    		writer: writer,
-		    		tape: Tape::new(),
-		    		programm: programm,
-		    		max_cycles: max_cycles,
-		    		cycles: 0,
-				}),
-			err => err,
-		}
-		
+	pub fn new(text : &str, max_cycles: u32) -> Result<Self, i16> {
+		let programm = try!(BfProgramm::new(text));
+		Ok(BFBox {
+		    tape: Tape::new(),
+		    programm: programm,
+		    max_cycles: max_cycles,
+		    cycles: 0,
+		})
 	}
 
-	pub fn run(&mut self) -> Result<(), i16> {
+	pub fn run(&mut self, reader: &mut Read, writer: &mut Write) -> Result<(), i16> {
 		loop {
+
 			if self.cycles > self.max_cycles {
-				return Err(100)
+				return Err(1001)
 			}
-			match self.programm.next(self.tape.read()) {
+
+			let curr_value =  self.tape.read();
+			
+			match *self.programm.next(curr_value) {
 				Op::End => {break;},
 				Op::Left(x) => try!(self.tape.left(x)),
 				Op::Right(x) => try!(self.tape.right(x)),
 				Op::Add(x) => try!(self.tape.add(x)),
 				Op::Substract(x) => try!(self.tape.substract(x)),
 				Op::In(_) => {
-					let x = try!(self.readIn());
+					let x = try!(self.read_in(reader));
 					try!(self.tape.write(x))
 				},
-				Op::Out(_) => try!(self.writeOut(self.tape.read())),
+				Op::Out(_) => try!(self.write_out(writer, curr_value)),
 				_ => return Err(100),
 			}
+
+			self.cycles = self.cycles + 1;
 		}
 		Ok(())
 	}
 
-	fn readIn(&mut self)  -> Result<i16, i16> {
+	fn read_in(&mut self, reader: &mut Read)  -> Result<i16, i16> {
 		let mut buffer = [0];
-		match self.reader.read(&mut buffer[..]) {
+		match reader.read(&mut buffer[..]) {
 			Ok(1) => Ok(buffer[0] as i16),
 			_ => Err(100),
 		}
 	}
 
-	fn writeOut(&mut self, value : u8) -> Result<(), i16> {
+	fn write_out(&mut self, writer: &mut Write, value : u8) -> Result<(), i16> {
 		let buffer = [value];
-		match self.writer.write(&buffer[..]) {
+		match writer.write(&buffer[..]) {
 			Ok(1) => Ok(()),
 			_ => Err(100),
 		}
@@ -89,33 +152,34 @@ struct BfProgramm {
 
 impl BfProgramm {
 	fn new(text : &str) -> Result<Self, i16> {
-		match parse_bftext(text) {
-		    Ok(ops) =>  Ok(BfProgramm{
-							ops: ops,
-							pointer: 0,
-						}),
-		    err => err,
-		}
+		let ops = try!(parse_bftext(text));
+		Ok(BfProgramm{
+			ops: ops,
+			pointer: 0,
+		})
 	}
 
-	fn next(&mut self, tape_val : u8) -> Op {
-		self.pointer = self.pointer + 1;
-		match self.ops[self.pointer] {
-			Op::Back(index) => {
-				if tape_val != 0 {
-					self.pointer = index as usize;
-					return self.next(tape_val)
+	fn next(&mut self, tape_val : u8) -> &Op {
+		loop {
+			self.pointer = self.pointer + 1;
+			let op = &self.ops[self.pointer];
+			println!("Op {:?}, pointer {}, val {}", *op, self.pointer, tape_val);
+			match *op {
+				Op::Back(index) => {
+					match tape_val {
+					    0 => {},
+					    _ => {self.pointer = index as usize;},
+					}
 				}
-			}
-			Op::Forward(index) => {
-				if tape_val == 0 {
-					self.pointer = index as usize;
-					return self.next(tape_val)
+				Op::Forward(index) => {
+					match tape_val {
+					    0 => {self.pointer = index as usize;},
+					    _ => {},
+					}
 				}
+				_ => return op
 			}
-			op => {}
 		}
-		self.ops[self.pointer]
 	}
 }
 
