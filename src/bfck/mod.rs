@@ -69,7 +69,6 @@ impl Tape {
 	fn substract(&mut self, value : i16) -> Result<(), i16> {
 		let read = self.read() as i16;
 		let new_value = read - value;
-		println!("Substracting {} = {} - {}", new_value, read, value);
 		if new_value < 0 {
 			return Err(100);
 		}
@@ -99,6 +98,7 @@ impl BFBox {
 
 	pub fn run(&mut self, reader: &mut Read, writer: &mut Write) -> Result<(), i16> {
 		loop {
+			self.cycles = self.cycles + 1;
 
 			if self.cycles > self.max_cycles {
 				return Err(1001)
@@ -107,7 +107,7 @@ impl BFBox {
 			let curr_value =  self.tape.read();
 			
 			match *self.programm.next(curr_value) {
-				Op::End => {break;},
+				Op::End => {return Ok(());},
 				Op::Left(x) => try!(self.tape.left(x)),
 				Op::Right(x) => try!(self.tape.right(x)),
 				Op::Add(x) => try!(self.tape.add(x)),
@@ -119,10 +119,7 @@ impl BFBox {
 				Op::Out(_) => try!(self.write_out(writer, curr_value)),
 				_ => return Err(100),
 			}
-
-			self.cycles = self.cycles + 1;
 		}
-		Ok(())
 	}
 
 	fn read_in(&mut self, reader: &mut Read)  -> Result<i16, i16> {
@@ -163,7 +160,7 @@ impl BfProgramm {
 		loop {
 			self.pointer = self.pointer + 1;
 			let op = &self.ops[self.pointer];
-			println!("Op {:?}, pointer {}, val {}", *op, self.pointer, tape_val);
+			//println!("Op {:?}, pointer {}, val {}", *op, self.pointer, tape_val);
 			match *op {
 				Op::Back(index) => {
 					match tape_val {
