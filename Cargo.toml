@@ -1,6 +1,6 @@
 [package]
-name = "rbf"
+name = "bfck"
 version = "0.1.0"
-authors = ["zipp"]
+authors = ["Slava Zipp <zipp.pnl@gmail.com>"]
 
 [dependencies]

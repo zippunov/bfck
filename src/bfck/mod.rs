@@ -86,7 +86,7 @@ pub struct BFBox {
 }
 
 impl BFBox {
-	pub fn new(text : &str, max_cycles: u32) -> Result<Self, i16> {
+	pub fn new(text : &String, max_cycles: u32) -> Result<Self, i16> {
 		let programm = try!(BfProgramm::new(text));
 		Ok(BFBox {
 		    tape: Tape::new(),
@@ -148,7 +148,7 @@ struct BfProgramm {
 }
 
 impl BfProgramm {
-	fn new(text : &str) -> Result<Self, i16> {
+	fn new(text : &String) -> Result<Self, i16> {
 		let ops = try!(parse_bftext(text));
 		Ok(BfProgramm{
 			ops: ops,
@@ -160,7 +160,6 @@ impl BfProgramm {
 		loop {
 			self.pointer = self.pointer + 1;
 			let op = &self.ops[self.pointer];
-			//println!("Op {:?}, pointer {}, val {}", *op, self.pointer, tape_val);
 			match *op {
 				Op::Back(index) => {
 					match tape_val {
@@ -180,7 +179,7 @@ impl BfProgramm {
 	}
 }
 
-fn parse_bftext(text : &str) -> Result<Vec<Op>, i16> {
+fn parse_bftext(text : &String) -> Result<Vec<Op>, i16> {
 	let mut ops = text.chars().filter_map(|c| {
 			match c {
 				'>' => Some(Op::Right(1)),
