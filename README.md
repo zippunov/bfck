@@ -23,7 +23,7 @@ the Brainfuck creator Urban Dominik Müller.
 ```
 cargo build
 ```
-- run some test rb file to verify if it is working
+- run some test bf file to verify if it is working
 ```
 target/debug/bfck bf_src/bottles.bf
 ```
