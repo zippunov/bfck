@@ -8,8 +8,8 @@ use std::env;
 
 mod bfck;
 
-fn read_file(path_str : &String) -> String {
-	let path = Path::new(path_str);
+fn read_file(path_str: &String) -> String {
+    let path = Path::new(path_str);
     let display = path.display();
 
     let mut file = match File::open(&path) {
@@ -25,25 +25,24 @@ fn read_file(path_str : &String) -> String {
     file_body
 }
 
-fn run_box(code : &String) -> Result<(), i32> {
-	//let mut read_buff = Cursor::new(Vec::new());
-	//let mut write_buff = Cursor::new(Vec::new());
-	let mut bfck_box = try!(bfck::BFBox::new(&code, 1000000000));
-	// try!(bfck_box.run(&mut read_buff, &mut write_buff));
-	try!(bfck_box.run(&mut io::stdin(), &mut io::stdout()));
-	// println!("{:?}", write_buff);
-	Ok(())
+fn run_box(code: &String) -> Result<(), i16> {
+    //let mut read_buff = Cursor::new(Vec::new());
+    //let mut write_buff = Cursor::new(Vec::new());
+    let mut bfck_box = try!(bfck::BFBox::new(&code));
+    // try!(bfck_box.run(&mut read_buff, &mut write_buff));
+    try!(bfck_box.run(&mut io::stdin(), &mut io::stdout()));
+    // println!("{:?}", write_buff);
+    Ok(())
 }
 
-
 fn main() {
-	let path = match env::args().nth(1) {
-		Some(p) => p,
-		None => panic!("Here comes usage message"),
-	};
-	let code = read_file(&path);
-	match run_box(&code) {
-		Ok(_) => {},
-		Err(x) => println!("Error {}", x)
-	}
+    let path = match env::args().nth(1) {
+        Some(p) => p,
+        None => panic!("Here comes usage message"),
+    };
+    let code = read_file(&path);
+    match run_box(&code) {
+        Ok(_) => {},
+        Err(x) => println!("Error {} {:?}", x, bfck::error_description(x))
+    }
 }
