@@ -117,7 +117,11 @@ impl BFBox {
                 Op::Add(x) => try!(self.tape.add(x)),
                 Op::Substract(x) => try!(self.tape.substract(x)),
                 Op::In(_) => {
-                    let x = try!(self.read_in(reader));
+                    let x = match self.read_in(reader) {
+                        Err(_) => { return Err(3); },
+                        Ok(-1) => { return Ok(()); },
+                        Ok(x) => x,
+                    };
                     try!(self.tape.write(x))
                 },
                 Op::Out(_) => try!(self.write_out(writer, curr_value)),
@@ -130,7 +134,8 @@ impl BFBox {
         let mut buffer = [0];
         match reader.read(&mut buffer[..]) {
             Ok(1) => Ok(buffer[0] as i16),
-            _ => Err(3),
+            Ok(0) => Ok(-1),
+            _ => Err(3)
         }
     }
 
