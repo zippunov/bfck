@@ -12,6 +12,7 @@ the Brainfuck creator Urban Dominik Müller.
 - **Tape** has fixed classic length of 30000 cells
 - **Tape** stores unsigned byte values
 - **Tape** value rotates. So 255 + 1 = 0 and 0 - 1 = 255
+- **Tape** address rotates. So 29999 + 1 = 0 and 0 - 1 = 29999
 - interpreter compresses BF repeating operations into
   single operation
 - interpreter calculates jumping addresses for correspondent **Forward**

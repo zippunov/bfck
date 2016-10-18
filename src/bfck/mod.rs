@@ -33,12 +33,21 @@ struct Tape {
     pointer: usize,
 }
 
-fn wrap(value: i16) -> i16 {
+fn wrap_value(value: i16) -> u8 {
     let new_value = value % 256;
     if new_value < 0 {
-        return new_value + 256;
+        return (new_value + 256) as u8;
     } else {
-        return new_value;
+        return new_value as u8;
+    }
+}
+
+fn wrap_pointer(pointer: i16) -> usize {
+    let new_pointer = pointer % 30000;
+    if new_pointer < 0 {
+        return (new_pointer + 30000) as usize;
+    } else {
+        return new_pointer as usize;
     }
 }
 
@@ -54,41 +63,28 @@ impl Tape {
         self.cells[self.pointer]
     }
 
-    fn write(&mut self, value: i16) -> Result<(), i16> {
-        self.cells[self.pointer] = wrap(value) as u8;
-        Ok(())
+    fn write(&mut self, value: i16) {
+        self.cells[self.pointer] = wrap_value(value);
     }
 
-    fn left(&mut self, value: i16) -> Result<(), i16> {
-        let decrement = value as usize;
-        if self.pointer < decrement {
-            return Err(7);
-        }
-        self.pointer = self.pointer - decrement;
-        Ok(())
+    fn left(&mut self, value: i16) {
+        let p = self.pointer as i16;
+        self.pointer = wrap_pointer(p - value);
     }
 
-    fn right(&mut self, value: i16) -> Result<(), i16> {
-        let increment = value as usize;
-        if self.pointer + increment > 30000 {
-            return Err(6);
-        }
-        self.pointer = self.pointer + increment;
-        Ok(())
+    fn right(&mut self, value: i16) {
+        let p = self.pointer as i16;
+        self.pointer = wrap_pointer(p + value);
     }
 
-    fn add(&mut self, value: i16) -> Result<(), i16> {
-        let read = self.read() as i16;
-        let new_value = read + value;
-        try!(self.write(new_value));
-        Ok(())
+    fn add(&mut self, value: i16) {
+        let r = self.read() as i16;
+        self.write(r + value);
     }
 
-    fn substract(&mut self, value: i16) -> Result<(), i16> {
-        let read = self.read() as i16;
-        let new_value = read - value;
-        try!(self.write(new_value));
-        Ok(())
+    fn substract(&mut self, value: i16) {
+        let r = self.read() as i16;
+        self.write(r - value);
     }
 }
 
@@ -111,18 +107,18 @@ impl BFBox {
         loop {
             let curr_value = self.tape.read();
             match *self.programm.next(curr_value) {
-                Op::End => { return Ok(()); },
-                Op::Left(x) => try!(self.tape.left(x)),
-                Op::Right(x) => try!(self.tape.right(x)),
-                Op::Add(x) => try!(self.tape.add(x)),
-                Op::Substract(x) => try!(self.tape.substract(x)),
+                Op::End => return Ok(()),
+                Op::Left(x) => self.tape.left(x),
+                Op::Right(x) => self.tape.right(x),
+                Op::Add(x) => self.tape.add(x),
+                Op::Substract(x) => self.tape.substract(x),
                 Op::In(_) => {
                     let x = match self.read_in(reader) {
-                        Err(_) => { return Err(3); },
-                        Ok(-1) => { return Ok(()); },
-                        Ok(x) => x,
+                        Err(_) => return Err(3),
+                        Ok(-1) => return Ok(()),
+                        Ok(bt) => bt,
                     };
-                    try!(self.tape.write(x))
+                    self.tape.write(x)
                 },
                 Op::Out(_) => try!(self.write_out(writer, curr_value)),
                 _ => return Err(4),
